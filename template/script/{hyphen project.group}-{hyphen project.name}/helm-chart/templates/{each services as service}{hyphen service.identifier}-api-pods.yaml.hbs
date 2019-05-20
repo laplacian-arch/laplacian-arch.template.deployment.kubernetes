@@ -1,0 +1,41 @@
+{{#define "service_name"}}{{hyphen service.identifier}}-api{{/define}}
+{{={{{ }}}=}}
+
+{{ $it := .Values.services.{{{lower-camel service.identifier}}} }}
+{{- if $it.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{{service_name}}}
+spec:
+  replicas: {{ $it.replicas }}
+  selector:
+    matchLabels:
+      app: {{{service_name}}}
+  template:
+    metadata:
+      labels:
+        app: {{{service_name}}}
+    spec:
+      containers:
+        - name: {{{service_name}}}
+          image: {{ $it.image }}:{{ $it.version }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          env:
+            - name: IMAGE_VERSION
+              value: {{ $it.version }}
+            - name: DATASOURCE_URL
+              value: {{ $it.datasource.url }}
+            - name: DATASOURCE_USER
+              value: {{ $it.datasource.user }}
+            - name: DATASOURCE_PASS
+              value: {{ $it.datasource.pass }}
+          ports:
+            - containerPort: {{ $it.port }}
+              protocol: TCP
+          livenessProbe:
+            initialDelaySeconds: 15
+            httpGet:
+              path: /
+              port: {{ $it.port }}
+{{- end }}

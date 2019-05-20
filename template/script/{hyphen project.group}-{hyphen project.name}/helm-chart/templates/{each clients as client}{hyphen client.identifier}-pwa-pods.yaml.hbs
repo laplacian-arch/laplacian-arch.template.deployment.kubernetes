@@ -1,0 +1,43 @@
+{{#define "client_name"}}{{hyphen client.identifier}}-pwa{{/define}}
+{{={{{ }}}=}}
+
+{{ $it := .Values.clients.{{{lower-camel client.identifier}}} }}
+{{- if $it.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{{client_name}}}
+spec:
+  replicas: {{ $it.replicas }}
+  selector:
+    matchLabels:
+      app: {{{client_name}}}
+  template:
+    metadata:
+      labels:
+        app: {{{client_name}}}
+    spec:
+      containers:
+        - name: {{{client_name}}}
+          image: {{ $it.image }}:{{ $it.version }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          env:
+            - name: IMAGE_VERSION
+              value: {{ $it.version }}
+          {{{#each client.services as |service|}}}
+            - name: {{{upper-underscore service.identifier}}}_API_HOST
+              {{- if .Values.local }}
+              value: "http://localhost:{{ $it.port }}"
+              {{- else }}
+              value: "https://{{ .Values.domain }}"
+              {{- end }}
+          {{{/each}}}
+          ports:
+            - containerPort: {{ $it.port }}
+              protocol: TCP
+          livenessProbe:
+            initialDelaySeconds: 15
+            httpGet:
+              path: /
+              port: {{ $it.port }}
+{{- end }}

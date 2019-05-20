@@ -1,0 +1,30 @@
+{{#define "datasource_name"}}{{hyphen datasource.identifier}}{{/define}}
+{{={{{ }}}=}}
+
+{{ $it := .Values.datasources.{{{lower-camel datasource.identifier}}} }}
+{{- if $it.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{{datasource_name}}}-migrate
+spec:
+  template:
+    metadata:
+      labels:
+        app: {{{datasource_name}}}
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: main
+          image: {{ $it.migrateJob.image }}:{{ $it.migrateJob.version }}
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          env:
+            - name: IMAGE_VERSION
+              value: {{ $it.migrateJob.version }}
+            - name: DATASOURCE_URL
+              value: {{ $it.migrateJob.url }}
+            - name: DATASOURCE_USER
+              value: {{ $it.dbUser }}
+            - name: DATASOURCE_PASS
+              value: {{ $it.dbPass }}
+{{- end }}

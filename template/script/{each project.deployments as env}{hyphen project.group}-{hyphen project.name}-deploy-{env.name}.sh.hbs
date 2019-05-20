@@ -1,0 +1,80 @@
+{{define "local_dev" (eq env.name "local-dev")}}
+{{#define "app_name"}}{{hyphen project.group}}-{{hyphen project.name}}{{/define}}
+#!/usr/bin/env bash
+set -e
+DIR=$(cd $(dirname "$0") && pwd)
+PROJECT_NAME={{hyphen project.group}}
+APP_NAME={{app_name}}
+CLUSTER_NAME={{app_name}}
+BASE_DIR=$DIR/$APP_NAME
+NUM_NODES=3
+MACHINE_TYPE=n1-standard-1
+STATIC_IP_NAME=$APP_NAME-ip
+
+set -x
+  {{#unless local_dev}}
+gcloud config set project $PROJECT_NAME
+
+(gcloud compute addresses list | grep $STATIC_IP_NAME) \
+  || gcloud compute addresses create $STATIC_IP_NAME --global
+
+STATIC_IP=$(gcloud compute addresses list | grep $STATIC_IP_NAME | awk '{printf $2}')
+
+(gcloud container clusters list | grep $CLUSTER_NAME) \
+  || gcloud container clusters create \
+  $CLUSTER_NAME \
+  --num-nodes $NUM_NODES \
+  --machine-type $MACHINE_TYPE
+  {{/unless}}
+
+kubectl get ServiceAccount tiller --namespace kube-system \
+|| kubectl create -f $BASE_DIR/service-account_tiller.yaml
+
+(kubectl get pods --namespace=kube-system | grep tiller-deploy | grep 1/1) \
+|| helm init \
+  --upgrade \
+  --service-account tiller \
+  --history-max 200
+
+while ! (kubectl get pods --namespace=kube-system | grep tiller-deploy | grep 1/1)
+do
+  sleep 3
+done
+
+  {{#unless local_dev}}
+(kubectl get CustomResourceDefinitions | grep certificates.certmanager.k8s.io) \
+|| kubectl apply -f https://raw.githubusercontent.com/jetstack/cert-manager/release-0.7/deploy/manifests/00-crds.yaml
+
+(kubectl get namespaces | grep cert-manager) \
+|| (\
+  kubectl create namespace cert-manager \
+  && kubectl label namespace cert-manager certmanager.k8s.io/disable-validation=true \
+)
+
+(helm ls | grep cert-manager) \
+|| (\
+  helm repo add jetstack https://charts.jetstack.io \
+  && helm repo update \
+  && helm install \
+    --name cert-manager \
+    --namespace cert-manager \
+    --version v0.7.2 \
+    jetstack/cert-manager \
+)
+
+(kubectl get clusterissuer | grep letsencrypt) \
+|| kubectl apply \
+    -f $BASE_DIR/letsencrypt-issuer.yaml
+  {{/unless}}
+
+(kubectl get namespaces | grep $PROJECT_NAME) \
+|| kubectl create namespace $PROJECT_NAME
+
+(helm ls | grep $APP_NAME) \
+&& helm delete $APP_NAME --purge || true
+
+helm install \
+  --name $APP_NAME \
+  --namespace $PROJECT_NAME \
+  -f $BASE_DIR/values-{{env.name}}.yaml \
+  $BASE_DIR/helm-chart

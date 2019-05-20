@@ -1,0 +1,37 @@
+apiVersion: certmanager.k8s.io/v1alpha1
+kind:  ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: "https://acme-v02.api.letsencrypt.org/directory"
+    email: iwauo.tajima@gmail.com
+    privateKeySecretRef:
+      name: letsencrypt-production
+    dns01:
+      providers:
+        - name: cloudflare
+          cloudflare:
+            email: iwauo.tajima@gmail.com
+            apiKeySecretRef:
+              name: cloudflare
+              key: api-key
+---
+apiVersion: certmanager.k8s.io/v1alpha1
+kind:  ClusterIssuer
+metadata:
+  name: letsencrypt-stg
+spec:
+  acme:
+    server: "https://acme-staging-v02.api.letsencrypt.org/directory"
+    email: iwauo.tajima@gmail.com
+    privateKeySecretRef:
+      name: letsencrypt-staging
+    dns01:
+      providers:
+        - name: cloudflare
+          cloudflare:
+            email: iwauo.tajima@gmail.com
+            apiKeySecretRef:
+              name: cloudflare
+              key: api-key

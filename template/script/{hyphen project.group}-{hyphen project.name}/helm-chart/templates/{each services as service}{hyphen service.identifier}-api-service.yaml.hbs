@@ -1,0 +1,15 @@
+{{#define "service_name"}}{{hyphen service.identifier}}-api{{/define}}
+{{={{{ }}}=}}
+
+{{ $it := .Values.services.{{{lower-camel service.identifier}}} }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{{service_name}}}
+spec:
+  type: NodePort
+  ports:
+    - port: {{ $it.port }}
+      targetPort: {{ $it.port }}
+  selector:
+    app: {{{service_name}}}

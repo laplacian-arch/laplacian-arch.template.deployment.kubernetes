@@ -1,0 +1,17 @@
+{{#define "datasource_name"}}{{hyphen datasource.identifier}}{{/define}}
+{{={{{ }}}=}}
+
+{{ $it := .Values.datasources.{{{lower-camel datasource.identifier}}} }}
+{{- if $it.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{{datasource_name}}}
+spec:
+  type: NodePort
+  ports:
+    - port: {{ $it.port }}
+      targetPort: {{ $it.port }}
+  selector:
+    app: {{{datasource_name}}}
+{{- end }}

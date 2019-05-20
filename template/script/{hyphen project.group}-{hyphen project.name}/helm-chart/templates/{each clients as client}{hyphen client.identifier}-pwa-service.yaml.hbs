@@ -1,0 +1,17 @@
+{{#define "client_name"}}{{hyphen client.identifier}}-pwa{{/define}}
+{{={{{ }}}=}}
+
+{{ $it := .Values.clients.{{{lower-camel client.identifier}}} }}
+{{- if $it.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{{client_name}}}
+spec:
+  type: NodePort
+  ports:
+    - port: {{ $it.port }}
+      targetPort: {{ $it.port }}
+  selector:
+    app: {{{client_name}}}
+{{- end }}

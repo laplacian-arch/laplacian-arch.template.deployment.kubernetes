@@ -1,0 +1,30 @@
+{{#define "datasource_name"}}{{hyphen datasource.identifier}}{{/define}}
+{{={{{ }}}=}}
+{{ $it := .Values.datasources.{{{lower-camel datasource.identifier}}} }}
+{{- if  $it.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{{datasource_name}}}
+spec:
+  replicas: {{ $it.replicas }}
+  selector:
+    matchLabels:
+      app: {{{datasource_name}}}
+  template:
+    metadata:
+      labels:
+        app: {{{datasource_name}}}
+    spec:
+      containers:
+        - name: {{{datasource_name}}}
+          image: {{ $it.image }}:{{ $it.version }}
+          env:
+            - name: POSTGRES_USER
+              value: "{{ $it.dbUser }}"
+            - name: POSTGRES_PASSWORD
+              value: "{{ $it.dbPass }}"
+          ports:
+            - containerPort: {{ $it.port }}
+              protocol: TCP
+{{- end }}

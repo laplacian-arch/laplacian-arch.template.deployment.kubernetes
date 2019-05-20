@@ -1,0 +1,49 @@
+{{#define "app_name"}}{{hyphen project.group}}-{{hyphen project.name}}{{/define}}
+
+{{={{{ }}}=}}
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: {{{app_name}}}-ingress
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: {{{app_name}}}-ip
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    {{- if .Values.certificate.enabled }}
+    certmanager.k8s.io/cluster-issuer: letsencrypt-prod
+    {{- end }}
+spec:
+  {{- if .Values.certificate.enabled }}
+  tls:
+  - secretName: {{ .Values.domain }}-tls
+    hosts:
+    - {{ .Values.domain }}
+  {{- end }}
+  rules:
+    {{- if .Values.local }}
+    - http:
+    {{- else }}
+    - host: {{ .Values.domain }}
+      http:
+    {{- end }}
+        paths:
+        {{{#each clients as |client|}}}
+        {{- with $it := .Values.clients.{{{lower-camel client.identifier}}} }}
+        {{- if and $it.enabled $it.basePath }}
+        - path: {{ $it.basePath }}
+          backend:
+            serviceName: {{{hyphen client.identifier}}}-pwa
+            servicePort: {{ $it.port }}
+        {{- end }}
+        {{- end }}
+        {{{/each}}}
+
+        {{{#each services as |service|}}}
+        {{- with $it := .Values.services.{{{lower-camel service.identifier}}} }}
+        {{- if and $it.enabled $it.basePath }}
+        - path: {{ $it.basePath }}
+          backend:
+            serviceName: {{{hyphen service.identifier}}}-api
+            servicePort: {{ $it.port }}
+        {{- end }}
+        {{- end }}
+        {{{/each}}}

@@ -1,0 +1,64 @@
+{{#define "container_registry"}}{{cut (hyphen project.group) "-"}}/{{/define}}
+
+domain: {{env.domain_name}}
+{{#if (eq env.name "local-dev")}}
+local: true
+imagePullPolicy: Never
+{{else}}
+local: false
+imagePullPolicy: Always
+{{/if}}
+certificate:
+  {{#if (or (eq env.name "prod") (eq env.name "stg"))}}
+  enabled: true
+  acme:
+    server: {{#if (eq env.name "prod")}}prod{{else}}stg{{/if}}
+    email: {{env.acme.email}}
+    apiKey: {{env.acme.api_key}}
+  {{else}}
+  enabled: false
+  {{/if}}
+
+clients:
+  {{#each clients as |client|}}
+  {{lower-camel client.identifier}}:
+    enabled: true
+    basePath: /*
+    replicas: 1
+    port: 80
+    version: {{client.version}}
+    image: {{container_registry}}{{hyphen client.identifier}}-pwa-client
+  {{/each}}
+
+services:
+  {{#each services as |service|}}
+  {{lower-camel service.identifier}}:
+    enabled: true
+    basePath: {{service.path}}/*
+    replicas: 1
+    port: {{service.port}}
+    version: {{service.version}}
+    image: {{container_registry}}{{hyphen service.identifier}}-service
+    datasource:
+      url: "{{service.datasource.jdbc_url}}"
+      user: {{service.datasource.user}}
+      pass: {{service.datasource.password}}
+  {{/each}}
+
+datasources:
+  {{#each datasources as |datasource|}}
+  {{lower-camel datasource.identifier}}:
+    enabled: true
+    port: {{datasource.port}}
+    replicas: 1
+    {{#if (eq datasource.type "postgres")}}
+    image: postgres
+    version: 11.1-alpine
+    {{/if}}
+    dbUser:  "{{datasource.user}}"
+    dbPass:  "{{datasource.password}}"
+    migrateJob:
+      url: "{{datasource.jdbc_url}}"
+      version: "{{datasource.version}}"
+      image: {{container_registry}}{{hyphen datasource.identifier}}-migrate
+  {{/each}}

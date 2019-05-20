@@ -1,0 +1,13 @@
+project:
+  group: laplacian-arch
+  type: template
+  name: deployment
+  subname: kubernetes
+  version: "1.0.0"
+  description: |
+    A laplacian template module providing a set of scripts which deploy the entire application to a kubernetes
+    cluster as a helm-package.
+    Currently, deploying to k8s clusters on Google Kubernetes Engine (GKE)
+    and local clusters on Docker for Desktop are supported.
+    SSL with automated certification by Let's encrypt is enabled by default when deploying on GKE.
+
