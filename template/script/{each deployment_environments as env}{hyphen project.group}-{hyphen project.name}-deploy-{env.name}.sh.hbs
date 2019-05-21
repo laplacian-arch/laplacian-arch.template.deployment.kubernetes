@@ -41,6 +41,14 @@ do
   sleep 3
 done
 
+  {{#if local_dev}}
+(helm ls | grep nginx-ingress) \
+|| helm install \
+  --name nginx-ingress \
+  --namespace kube-system \
+  stable/nginx-ingress
+  {{/if}}
+
   {{#unless local_dev}}
 (kubectl get CustomResourceDefinitions | grep certificates.certmanager.k8s.io) \
 || kubectl apply -f https://raw.githubusercontent.com/jetstack/cert-manager/release-0.7/deploy/manifests/00-crds.yaml

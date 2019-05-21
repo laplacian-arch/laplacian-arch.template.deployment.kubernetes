@@ -1,29 +1,39 @@
 {{#define "container_registry"}}{{cut (hyphen project.group) "-"}}/{{/define}}
+{{define "local_dev" (eq env.name "local-dev")}}
+{{define "node" env.nodes.[0]}}
+{{define "uses_ingress_native_implementation" (eq node.type "gke_cluster")}}
 
-domain: {{env.domain_name}}
-{{#if (eq env.name "local-dev")}}
+domain: {{node.domain_name}}
+  {{#if local_dev}}
 local: true
 imagePullPolicy: Never
-{{else}}
+  {{else}}
 local: false
 imagePullPolicy: Always
-{{/if}}
+  {{/if}}
+  {{#if uses_ingress_native_implementation}}
+uses_ingress_native_implementation: true
+  {{/if}}
 certificate:
-  {{#if (or (eq env.name "prod") (eq env.name "stg"))}}
+  {{#unless local_dev}}
   enabled: true
   acme:
-    server: {{#if (eq env.name "prod")}}prod{{else}}stg{{/if}}
-    email: {{env.acme.email}}
-    apiKey: {{env.acme.api_key}}
+    server: prod
+    email: {{node.acme.email}}
+    apiKey: {{node.acme.api_key}}
   {{else}}
   enabled: false
-  {{/if}}
+  {{/unless}}
 
 clients:
   {{#each clients as |client|}}
   {{lower-camel client.identifier}}:
     enabled: true
+    {{#if uses_ingress_native_implementation}}
     basePath: /*
+    {{else}}
+    basePath: (/.*)
+    {{/if}}
     replicas: 1
     port: 80
     version: {{client.version}}
@@ -34,11 +44,18 @@ services:
   {{#each services as |service|}}
   {{lower-camel service.identifier}}:
     enabled: true
+    {{#if uses_ingress_native_implementation}}
     basePath: {{service.path}}/*
+    {{else}}
+    basePath: ({{service.path}}/.*)
+    {{/if}}
     replicas: 1
     port: {{service.port}}
     version: {{service.version}}
     image: {{container_registry}}{{hyphen service.identifier}}-service
+    {{#unless local_dev}}
+    startUpTime: 60
+    {{/unless}}
     datasource:
       url: "{{service.datasource.jdbc_url}}"
       user: {{service.datasource.user}}

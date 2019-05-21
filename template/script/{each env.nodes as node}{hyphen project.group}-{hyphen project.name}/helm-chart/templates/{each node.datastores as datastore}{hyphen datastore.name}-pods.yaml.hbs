@@ -1,3 +1,4 @@
+{{define "datasource" datastore.spec}}
 {{#define "datasource_name"}}{{hyphen datasource.identifier}}{{/define}}
 {{={{{ }}}=}}
 {{ $it := .Values.datasources.{{{lower-camel datasource.identifier}}} }}

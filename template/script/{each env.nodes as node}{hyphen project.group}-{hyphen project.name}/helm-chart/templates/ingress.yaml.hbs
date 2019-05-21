@@ -6,9 +6,16 @@ kind: Ingress
 metadata:
   name: {{{app_name}}}-ingress
   annotations:
-    kubernetes.io/ingress.global-static-ip-name: {{{app_name}}}-ip
+    {{- if .Values.uses_ingress_native_implementation }}
     nginx.ingress.kubernetes.io/rewrite-target: /
+    {{- else }}
+    nginx.ingress.kubernetes.io/rewrite-target: $1
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    kubernetes.io/ingress.allow-http: "true"
+    kubernetes.io/ingress.class: nginx
+    {{- end }}
     {{- if .Values.certificate.enabled }}
+    kubernetes.io/ingress.global-static-ip-name: {{{app_name}}}-ip
     certmanager.k8s.io/cluster-issuer: letsencrypt-prod
     {{- end }}
 spec:

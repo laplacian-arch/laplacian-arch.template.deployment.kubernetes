@@ -1,3 +1,4 @@
+{{define "service" deployment.spec}}
 {{#define "service_name"}}{{hyphen service.identifier}}-api{{/define}}
 {{={{{ }}}=}}
 
@@ -33,9 +34,11 @@ spec:
           ports:
             - containerPort: {{ $it.port }}
               protocol: TCP
+          {{- if $it.startUpTime}}
           livenessProbe:
-            initialDelaySeconds: 15
+            initialDelaySeconds: {{$it.startUpTIme}}
             httpGet:
               path: /
               port: {{ $it.port }}
+          {{- end}}
 {{- end }}
